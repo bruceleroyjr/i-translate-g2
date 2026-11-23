@@ -79,7 +79,7 @@ check('time like Even: 09:31 AM 11/18/2026', stamp(at) === '09:31 AM 11/18/2026'
 check('PM time', stamp(new Date(2026, 10, 14, 21, 34).getTime()) === '09:34 PM 11/14/2026');
 check('length: seconds, minutes', length({ at: 0, end: 45000 }) === '45 s' && length({ at: 0, end: 12 * 60000 }) === '12 min');
 const metas = [
-  { id: 'old', at: 1000, end: 2000, from: 'Japanese', to: 'English', title: 'Movies & Music', n: 3, seen: true },
+  { id: 'old', at: 1000, end: 2000, from: 'Japanese', to: 'English', title: 'Naruto & J-Music', n: 3, seen: true },
   { id: 'new', at: 5000, end: 6000, from: 'Korean', to: 'English', title: '', n: 2, seen: false },
   { id: 'x<y', at: 3000, end: 4000, from: 'Korean', to: 'English', title: '<b>hi</b>', n: 1, seen: false },
 ];

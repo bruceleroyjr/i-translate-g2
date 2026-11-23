@@ -8,6 +8,7 @@ const LINES: [string, string, string, string][] = [
 ];
 const MINE: Record<string, string> = {
   "I'm from Canada.": '저는 캐나다에서 왔어요.',
+  'Have you been there?': '거기 가 보셨어요?',
   'Thank you so much!': '정말 감사합니다!',
   'Which exit should I take?': '몇 번 출구로 나가야 해요?',
   'I would love to try one.': '한번 가 보고 싶어요.',

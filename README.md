@@ -42,12 +42,13 @@ cd miniapp
 for f in test/test_*.js; do node "$f"; done
 ```
 
-Three checks currently fail (`test_readaloud`, `test_v071`, `test_voice`): they assert older settings defaults.
+## Layout
 
-## Notes
-
-- The app started as a fork of a larger personal G2 assistant app, so the source still contains code paths for features I-Translate does not use (chat, news, mail, meeting notes). They are switched off in this app.
-- The avatar sprites in `miniapp/public/avatar48/` are simple placeholders.
+- `miniapp/src/main.ts`: the app (glasses screens, gestures, the phone page)
+- `miniapp/src/engine.ts`: the translation engine (Soniox stream, the AI calls, your turn, reply ideas)
+- `miniapp/src/glasses.ts`: page layouts and the one-write-at-a-time link to the glasses
+- `miniapp/src/window.ts`: the card on the glasses (timers, screen-off rules) and text-fitting helpers
+- `miniapp/src/ai.ts`: the AI providers; `history.ts`: saved conversations; `readAloud.ts`: the phone's voices
 - `store/` holds the store listing text, privacy notes, icon generator and simulator screenshots.
 
 ## License

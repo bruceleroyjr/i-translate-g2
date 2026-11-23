@@ -3,8 +3,6 @@ import type { Item } from './window';
 export const READ_MAX_CHARS = 1500;
 export const CHUNK_CHARS = 180; 
 
-const TIME_PREFIX = /^\d{1,2}:\d{2}\s?[AP]M\s*[·•-]\s*/i;
-
 export function speakable(text: string): string {
   return text
     .replace(/[•·●■□◆◇▲▼※≡∴]/g, ' ')
@@ -17,44 +15,9 @@ export function speakable(text: string): string {
     .trim();
 }
 
-function joinParts(parts: string[]): string {
-  return parts.map((p) => p.trim().replace(/[.,;:]+$/, '')).filter(Boolean).reduce((acc, l) => (acc ? acc + (/[?!]$/.test(acc) ? ' ' : '. ') + l : l), '');
-}
-
 export function readableText(it: Item | null | undefined): string | null {
-  if (!it) return null;
-  const text = (it.text || '').trim();
-  const lines = text.split('\n').map((l) => l.trim());
-  let out = '';
-  switch (it.kind) {
-    case 'news': 
-      out = it.tray ? lines.filter(Boolean).slice(0, 2).join('. ') : text.split(/\n\n+/).slice(0, 2).join('. ');
-      break;
-    case 'mail': {
-      if (it.tray) {
-        const l = lines.filter(Boolean);
-        const from = (l[0] || '').replace(TIME_PREFIX, '').replace(/^from\s+/i, '');
-        out = joinParts([from ? 'From ' + from : '', l[1] || '', l[2] || '']);
-      } else {
-        const sender = (it.title || '').replace(/^MAIL\s*[—–-]\s*/i, '').trim();
-        const l = lines.filter(Boolean);
-        out = joinParts([sender ? `From ${sender}` : '', l[0] || '', l[1] || '']);
-      }
-      break;
-    }
-    case 'meeting':
-      out = [it.title, text].filter(Boolean).join('. ');
-      break;
-    case 'reply':
-      out = it.tray && it.title && !it.lifelog ? [it.title, text.slice(0, 400)].filter(Boolean).join('. ') : text || it.title || '';
-      break;
-    case 'note': case 'cue': case 'translation': case 'done':
-      out = text;
-      break;
-    default:
-      return null; 
-  }
-  out = speakable(out).slice(0, READ_MAX_CHARS).trim();
+  if (!it || it.kind !== 'translation') return null;
+  const out = speakable((it.text || '').trim()).slice(0, READ_MAX_CHARS).trim();
   return out || null;
 }
 

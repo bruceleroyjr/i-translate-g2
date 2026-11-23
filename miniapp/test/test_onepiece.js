@@ -14,7 +14,6 @@ function make() {
     textContainerUpgrade: async (d) => { calls.push({ kind: 'text', name: d.containerName, content: d.content }); return true; },
     updateImageRawData: async (d) => { calls.push({ kind: 'image', name: d.containerName }); return 'success'; },
   });
-  g.images = { idle: [1], blank: [0] };
   return { g, calls };
 }
 const content = (spec, name) => spec.textObject.find((b) => b.containerName === name)?.content;
@@ -24,25 +23,25 @@ const content = (spec, name) => spec.textObject.find((b) => b.containerName === 
   await g.create({ header: ' ', body: ' ' });
   await g.setPage('chat', { header: ' ', body: ' ' }); 
   await g.flush();
-  g.layoutFor = () => 'mail';
+  g.layoutFor = (k) => (k === 'chat' ? 'myturn' : 'card');
   const n = calls.length;
   await g.setPage('normal', { header: ' ', body: ' ', tray: false });
   check('nothing sent at the switch itself', calls.length === n);
-  await g.setText(IDS.headerSrc, 'Mallory Lee');
-  await g.setText(IDS.body, 'Can you send the Plan numbers?');
+  await g.setText(IDS.headerSrc, 'I-Translate · API keys');
+  await g.setText(IDS.body, 'Add your Soniox key and an AI key.');
   await g.setText(IDS.bottomHint, 'double tap: close');
-  await g.showCard('cardA', 'mail-a', [9]);
+  await g.showCard('cardA', 'bubble-a', [9]);
   check('no picture before the page is up', !calls.slice(n).some((c) => c.kind === 'image'));
   await g.flush();
   await wait(20);
   const after = calls.slice(n);
   check('ONE page build, no separate text writes', after.filter((c) => c.kind === 'page').length === 1 && !after.some((c) => c.kind === 'text'), after.map((c) => c.kind));
   const page = after.find((c) => c.kind === 'page').spec;
-  check('the texts are inside the build', content(page, 'headerSrc') === 'Mallory Lee' && content(page, 'body') === 'Can you send the Plan numbers?' && content(page, 'bottomHint') === 'Double tap: close',
+  check('the texts are inside the build', content(page, 'headerSrc') === 'I-Translate · API keys' && content(page, 'body') === 'Add your Soniox key and an AI key.' && content(page, 'bottomHint') === 'Double tap: close',
     page.textObject.map((b) => [b.containerName, b.content]));
   check('the picture goes right after the page', after.findIndex((c) => c.kind === 'image') > after.findIndex((c) => c.kind === 'page'), after.map((c) => c.kind));
   const k = calls.length;
-  await g.setText(IDS.body, 'Can you send the Plan numbers?');
+  await g.setText(IDS.body, 'Add your Soniox key and an AI key.');
   check('the same text again writes nothing (the class knows it is up)', calls.length === k);
   await g.setText(IDS.body, 'changed');
   await wait(5);
@@ -53,10 +52,10 @@ const content = (spec, name) => spec.textObject.find((b) => b.containerName === 
   await g.create({ header: ' ', body: ' ' });
   const n = calls.length;
   await g.setPage('chat', { header: ' ', body: ' ' });
-  await g.setText(IDS.body, 'You: weather?');
+  await g.setText(IDS.body, 'You: where is the station?');
   await wait(Glasses.FLUSH_MS + 40);
   const pages = calls.slice(n).filter((c) => c.kind === 'page');
-  check('sent by the timer, with its text', pages.length === 1 && content(pages[0].spec, 'body') === 'You: weather?');
+  check('sent by the timer, with its text', pages.length === 1 && content(pages[0].spec, 'body') === 'You: where is the station?');
 }
 { 
   const { g, calls } = make();
@@ -80,34 +79,37 @@ const content = (spec, name) => spec.textObject.find((b) => b.containerName === 
 }
 { 
   const { g, calls } = make();
-  g.trayOn = true;
+  g.layoutFor = () => 'card';
   await g.create({ header: ' ', body: ' ' });
-  await g.setPage('normal', { header: ' ', body: ' ', tray: true });
-  await g.setText(IDS.homeRow0, '▶ @ Mallory  Plan?', 4);
+  await g.setPage('chat', { body: ' ' });
+  await g.flush();
+  await g.setPage('normal', { body: ' ' });
+  await g.setText(IDS.headerSrc, 'I-Translate · Status');
   await g.flush();
   const n = calls.length;
-  await g.refreshMenu({ meeting: true, translating: false, listening: true });
+  await g.refreshMenu({ translating: true });
   await g.flush();
   const after = calls.slice(n);
   const page = after.find((c) => c.kind === 'page')?.spec;
-  check('menu change on Home: one build with the row text inside, no text writes', !!page && content(page, 'homeRow0') === '▶ @ Mallory  Plan?' && !after.some((c) => c.kind === 'text'), after.map((c) => c.kind));
+  check('menu change: one build with the text inside, no text writes', !!page && content(page, 'headerSrc') === 'I-Translate · Status' && !after.some((c) => c.kind === 'text'), after.map((c) => c.kind));
+  check('menu change: the new label is in the build', page?.menuObject?.menuItems?.[0]?.itemName === 'Stop Translation', page?.menuObject);
 }
 { 
   const { g, calls } = make();
   await g.create({ header: ' ', body: ' ' });
   await g.setPage('chat', { header: ' ', body: ' ' });
   await g.flush();
-  g.layoutFor = () => 'mail';
+  g.layoutFor = (k) => (k === 'chat' ? 'myturn' : 'card');
   const n = calls.length;
   await g.setPage('normal', { header: ' ', body: ' ', tray: false });
-  const long = 'VITURE 🏆 Sweeping #1 since day 1. '.repeat(40);
-  await g.setText(IDS.headerSrc, 'From   VITURE');
+  const long = 'A very long line of translated text. '.repeat(40);
+  await g.setText(IDS.headerSrc, 'I-Translate · Long');
   await g.setText(IDS.body, long);
   await g.flush();
   await wait(20);
   const after = calls.slice(n);
   const page = after.find((c) => c.kind === 'page').spec;
-  check('long body: not inside the build', content(page, 'body') === ' ' && content(page, 'headerSrc') === 'From   VITURE', page.textObject.map((b) => [b.containerName, (b.content || '').length]));
+  check('long body: not inside the build', content(page, 'body') === ' ' && content(page, 'headerSrc') === 'I-Translate · Long', page.textObject.map((b) => [b.containerName, (b.content || '').length]));
   const bi = after.findIndex((c) => c.kind === 'text' && c.name === 'body');
   check('long body: written right after the page (before the pictures)', bi > after.findIndex((c) => c.kind === 'page') && after[bi].content.length > 1000
     && (after.findIndex((c) => c.kind === 'image') === -1 || after.findIndex((c) => c.kind === 'image') > bi), after.map((c) => c.kind + ':' + (c.name || '')));
@@ -123,17 +125,15 @@ const content = (spec, name) => spec.textObject.find((b) => b.containerName === 
     textContainerUpgrade: async (d) => { calls.push({ kind: 'text', name: d.containerName, content: d.content }); return true; },
     updateImageRawData: async () => 'success',
   });
-  g.images = { idle: [1], blank: [0] };
   await g.create({ header: ' ', body: ' ' });
   const n = calls.length;
   await g.setPage('chat', { header: ' ', body: ' ' });
-  await g.setText(IDS.headerSrc, '● TALK WITH HERMES');
+  await g.setText(IDS.headerSrc, '● YOUR TURN · EN → KO');
   await g.setText(IDS.body, 'Listening');
   await g.flush();
   const after = calls.slice(n);
   check('refused build: sent again without texts', after.filter((c) => c.kind === 'page').map((c) => c.has).join() === 'true,false', after);
   check('refused build: the texts follow one by one', ['headerSrc', 'body'].every((x) => after.some((c) => c.kind === 'text' && c.name === x)), after);
-  check('refused build: noted for the relay log', g.writeFails.some((w) => w.includes('sent again without texts')), g.writeFails);
 }
 console.log(fails ? `${fails} FAILED` : 'ALL PASS');
 process.exit(fails ? 1 : 0);

@@ -1,4 +1,4 @@
-import { chunks } from './readText';
+import { chunks } from './readText.ts';
 
 type Synth = SpeechSynthesis | undefined;
 const synth = (): Synth => (typeof speechSynthesis !== 'undefined' ? speechSynthesis : undefined);
@@ -24,9 +24,7 @@ export class ReadAloud {
   status = '';
   onChange: () => void = () => undefined;
   private gen = 0; 
-  fetchAudio: ((text: string, voice: string) => Promise<Blob>) | null = null;
   private audio: HTMLAudioElement | null = null;
-  private audioUrl = '';
   private unlocked = false;
   leadInMs = LEAD_IN_MS;
   private silenceUrl = '';
@@ -126,62 +124,6 @@ export class ReadAloud {
       this.audio.onended = this.audio.onerror = null;
       this.audio.pause();
     }
-    if (this.audioUrl) { URL.revokeObjectURL(this.audioUrl); this.audioUrl = ''; }
-  }
-
-  speakNatural(text: string, voice: string, fallback: () => void): boolean {
-    if (!this.fetchAudio || !text.trim()) { fallback(); return false; }
-    const s = synth();
-    if (s) s.cancel();
-    this.stopAudio();
-    const gen = ++this.gen;
-    const parts = chunks(text, 300);
-    const get = (i: number) => this.fetchAudio!(parts[i], voice);
-    let pending = get(0);
-    let fellBack = false;
-    const fallBack = (why: string) => { 
-      if (fellBack || gen !== this.gen) return;
-      fellBack = true;
-      this.status = why;
-      fallback();
-    };
-    this.set(true, 'Starting (natural voice)…');
-    const play = async (i: number): Promise<void> => {
-      let blob: Blob;
-      try {
-        blob = await pending;
-      } catch {
-        if (gen !== this.gen) return;
-        if (i === 0) return fallBack('Natural voice unavailable (PC not reachable?): the iPhone voice is used.');
-        return this.set(false, 'Natural voice stopped: the PC did not answer.');
-      }
-      if (gen !== this.gen) return;
-      if (i + 1 < parts.length) pending = get(i + 1);
-      const a = this.player();
-      if (this.audioUrl) URL.revokeObjectURL(this.audioUrl);
-      this.audioUrl = URL.createObjectURL(blob);
-      a.src = this.audioUrl;
-      a.onended = () => {
-        if (gen !== this.gen) return;
-        if (i + 1 < parts.length) void play(i + 1);
-        else this.set(false, `Finished reading (natural voice, ${parts.length} part${parts.length === 1 ? '' : 's'}).`);
-      };
-      a.onerror = () => {
-        if (gen !== this.gen) return;
-        if (i === 0) fallBack('Natural voice: the audio could not be played, the iPhone voice is used.');
-        else this.set(false, 'Natural voice: the audio could not be played.');
-      };
-      try {
-        await a.play();
-        if (gen === this.gen) this.set(true, 'Speaking (natural voice)…');
-      } catch {
-        if (gen !== this.gen) return;
-        if (i === 0) return fallBack('Audio is blocked until you tap Test read-aloud once: the iPhone voice is used.');
-        this.set(false, 'Audio blocked: tap Test read-aloud once on the phone.');
-      }
-    };
-    this.leadIn(gen, () => void play(0)); 
-    return true;
   }
 
   unlockAudio(): void {
@@ -211,11 +153,6 @@ export class ReadAloud {
     } catch {
       return [];
     }
-  }
-
-  sample(name: string): boolean {
-    this.unlocked = true;
-    return this.speak(`Hello, this is ${name || 'the phone voice'}. I will read your messages aloud.`);
   }
 
   test(): boolean {

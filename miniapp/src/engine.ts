@@ -1,6 +1,5 @@
 
 import { AiClient, AiError } from './ai.ts';
-import type { Mode } from './relay';
 import { LANG_NOTES, TRANSLATE_TEMPLATE } from './prompts.ts';
 
 export const LANGS: Record<string, [string, string]> = {
@@ -40,6 +39,15 @@ Write what I could say back to their LAST line, in {mine}:
 - Each one short and natural, the way people really talk: at most 8 words, no emoji, no quotes.
 - Polite and useful. Fit the situation (a shop, a taxi, a restaurant, a meeting).
 Answer with exactly this JSON: {"replies": ["..."], "questions": ["..."]}`;
+
+export interface Mode {
+  conversing: boolean; 
+  translating?: string; 
+  awaiting?: boolean; 
+  held?: boolean; 
+  my_turn?: boolean;
+  stt?: string; 
+}
 
 export type Idea = { kind: 'reply' | 'ask'; text: string };
 type Item = { seq: number; kind: string; title: string; text: string; at: number; [k: string]: unknown };
@@ -169,8 +177,8 @@ export class LocalRelay {
     return !!(this.sonioxKey && this.ai);
   }
 
-  mode(): Mode & Record<string, unknown> {
-    return { listening: true, meeting: false, conversing: this.conversing, awaiting: false, held: this.held, my_turn: this.myTurn,
+  mode(): Mode {
+    return { conversing: this.conversing, awaiting: false, held: this.held, my_turn: this.myTurn,
       translating: this.translating ? `${this.translating} → ${this.translateTo}` : undefined, stt: this.sttStatus };
   }
 
@@ -208,21 +216,9 @@ export class LocalRelay {
     return { ok: true, service: 'i-translate-engine', mode: this.mode() };
   }
 
-  async voiceId() {
-    return null;
-  }
-
-  async allNews() {
-    return { items: [] }; 
-  }
-
   async closed(why: string) {
     this.appClosed(why);
     return { ok: true, mode: this.mode() };
-  }
-
-  async tts(_text: string, _voice: string): Promise<Blob> {
-    throw new Error('no natural voices in i-translate'); 
   }
 
   private push(kind: string, title = '', text = '', extra: Record<string, unknown> = {}): Item {
@@ -335,11 +331,11 @@ export class LocalRelay {
         return ok();
       }
       default:
-        return ok(); 
+        return ok();
     }
   }
 
-  async audio(pcm: Uint8Array, _source = '') {
+  async audio(pcm: Uint8Array) {
     if (this.translating && this.ws && this.wsOpen) {
       this.ws.send(pcm);
       this.lastSent = Date.now();

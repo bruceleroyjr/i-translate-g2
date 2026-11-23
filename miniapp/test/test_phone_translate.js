@@ -1,4 +1,4 @@
-import { TrLog, TR_KEEP, linesHtml, turnControls, controlsHtml, composerHtml, ideasHtml } from '../src/phoneTranslate.ts';
+import { TrLog, TR_KEEP, linesHtml, turnControls, composerHtml, ideasHtml } from '../src/phoneTranslate.ts';
 let fails = 0;
 const check = (name, ok, got) => { console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${ok ? '' : `  got: ${JSON.stringify(got)}`}`); if (!ok) fails++; };
 const log = new TrLog();
@@ -21,7 +21,7 @@ check('their turn, listening: Send (= tap) + Back (= double tap), their words so
   && turnControls({ ...base, myTurn: true, holding: true, draft: 'where is' }).status.includes('where is'));
 check('their turn, translating: Send greyed out', ids({ ...base, myTurn: true, sending: true }) === 'tr-send(off),tr-back');
 check('their turn, done: Speak again (= tap) + Back', ids({ ...base, myTurn: true }) === 'tr-again,tr-back');
-check('buttons html escapes the draft', controlsHtml({ ...base, myTurn: true, holding: true, draft: '<b>' }).includes('&lt;b&gt;'));
+check('the turn status escapes nothing itself (the composer escapes it)', turnControls({ ...base, myTurn: true, holding: true, draft: '<b>' }).status.includes('<b>'));
 {
   const both = [{ who: 'them', original: '안녕', text: 'Hi', at: 0 }, { who: 'me', original: 'Hello', text: '안녕하세요', at: 1000 }];
   const h = linesHtml(both, 'empty', true);

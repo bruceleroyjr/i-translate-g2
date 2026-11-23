@@ -7,20 +7,11 @@ const check = (name, ok, detail = '') => {
 };
 const R = (o) => readableText({ seq: 1, title: '', text: '', ...o });
 
-check('reply: the reply text', R({ kind: 'reply', text: 'Sunny, 84 degrees.' }) === 'Sunny, 84 degrees');
-check('news pop-up: headline + summary', R({ kind: 'news', text: 'Stocks rise\n\nS&P +0.6%.' }) === 'Stocks rise. S&P +0.6%', R({ kind: 'news', text: 'Stocks rise\n\nS&P +0.6%.' }));
-check('news opened from the tray: headline + summary line', R({ kind: 'news', tray: true, text: 'Stocks rise\nS&P +0.6%, Nasdaq +0.9%.\n\n— AP' }) === 'Stocks rise. S&P +0.6%, Nasdaq +0.9%', R({ kind: 'news', tray: true, text: 'Stocks rise\nS&P +0.6%, Nasdaq +0.9%.\n\n— AP' }));
-check('email pop-up: From sender. subject. first line', R({ kind: 'mail', title: 'MAIL — Mallory Lee', text: 'Plan numbers\n\nCan you send them before the 14th?\nThanks' }) === 'From Mallory Lee. Plan numbers. Can you send them before the 14th?',
-  R({ kind: 'mail', title: 'MAIL — Mallory Lee', text: 'Plan numbers\n\nCan you send them before the 14th?\nThanks' }));
-check('email opened from the tray: From sender. subject. first line', R({ kind: 'mail', tray: true, text: '9:40 AM  ·  From Mallory\nPlan?\n\nbody here\nmore' }) === 'From Mallory. Plan? body here', R({ kind: 'mail', tray: true, text: '9:40 AM  ·  From Mallory\nPlan?\n\nbody here\nmore' }));
-check('lifelog: the entry text, bullets not spelled out', R({ kind: 'note', text: '9:40 AM – 10:05 AM  ·  Work\nTalked.\n• You promised: send it' }) === '9:40 AM, 10:05 AM Work. Talked. You promised: send it',
-  R({ kind: 'note', text: '9:40 AM – 10:05 AM  ·  Work\nTalked.\n• You promised: send it' }));
-check('live cue: the cue text', R({ kind: 'cue', title: 'CUE', text: 'Ask: who owns the Q3 review?' }) === 'Ask: who owns the Q3 review?');
-check('past chat: title + snippet', R({ kind: 'reply', tray: true, title: 'Weather tomorrow', text: '10:12 AM · 2 questions\n\nYou: weather?\nHermes: Sunny.' }).startsWith('Weather tomorrow. '));
-check('an opened lifelog (reply + lifelog flag) reads its text, not a chat title', R({ kind: 'reply', tray: true, lifelog: true, title: 'Coffee', text: 'Talked about the deck.' }) === 'Talked about the deck');
-check('status / wake / approval: nothing to read', R({ kind: 'status', text: 'x' }) === null && R({ kind: 'wake', text: 'x' }) === null && R({ kind: 'approval', text: 'x' }) === null);
-check('no window: nothing to read', readableText(null) === null && R({ kind: 'reply', text: '   ' }) === null);
-check('capped at READ_MAX_CHARS', R({ kind: 'reply', text: 'word '.repeat(2000) }).length <= READ_MAX_CHARS);
+check('translation: the translated text', R({ kind: 'translation', original: '안녕하세요', text: 'Hello there.' }) === 'Hello there');
+check('a translation is read without symbols the voice would spell out', R({ kind: 'translation', text: 'A • B — C' }) === 'A B, C');
+check('status / wake: nothing to read', R({ kind: 'status', text: 'x' }) === null && R({ kind: 'wake', text: 'x' }) === null);
+check('no card: nothing to read', readableText(null) === null && R({ kind: 'translation', text: '   ' }) === null);
+check('capped at READ_MAX_CHARS', R({ kind: 'translation', text: 'word '.repeat(2000) }).length <= READ_MAX_CHARS);
 check('speakable: line breaks become pauses, symbols dropped', speakable('A\n\nB • C — D') === 'A. B C, D', speakable('A\n\nB • C — D'));
 
 const long = 'This is sentence number one. '.repeat(20) + 'and a very long run on part without any full stop ' + 'x'.repeat(10);
@@ -33,21 +24,10 @@ import { load, READ_KINDS } from '../src/settings.ts';
 {
   const mem = (v) => ({ get: async () => v, set: async () => undefined });
   const fresh = await load(mem(''));
-  check('settings: every pop-up type starts switched off (my translated turn is on: it is the point of Conversate)', READ_KINDS.length === 7 && READ_KINDS.every((k) => fresh.readKinds[k] === (k === 'myturn')), JSON.stringify(fresh.readKinds));
+  check('settings: their lines start silent, your own turn is played (the other person must hear it)', READ_KINDS.join() === 'translations,myturn' && !fresh.readKinds.translations && fresh.readKinds.myturn);
   check('settings: translation voices start female', fresh.voiceSpoken === 'female' && fresh.voiceTranslated === 'female');
-  const old = await load(mem(JSON.stringify({ readAloud: true, autoRead: true, readKinds: { news: true, mail: 'yes', bogus: true } })));
-  check('settings: the 0.2.103 switches are dropped, only real true values count', old.readAloud === undefined && old.autoRead === undefined && old.readKinds.news === true && old.readKinds.mail === false && old.readKinds.myturn === true && !('bogus' in old.readKinds), JSON.stringify(old.readKinds));
-}
-
-{
-  const { relaySettings } = await import('../src/settings.ts');
-  const mem = (v) => ({ get: async () => v, set: async () => undefined });
-  const a = await load(mem(''));
-  check('settings: coaching starts Active', a.coachStyle === 'active' && relaySettings(a).coach_style === 'active');
-  const p = await load(mem(JSON.stringify({ coachStyle: 'passive' })));
-  check('settings: Passive is kept and sent to the relay', p.coachStyle === 'passive' && relaySettings(p).coach_style === 'passive');
-  const bad = await load(mem(JSON.stringify({ coachStyle: 'loud' })));
-  check('settings: an unknown coaching value becomes Active', bad.coachStyle === 'active');
+  const old = await load(mem(JSON.stringify({ readKinds: { translations: 'yes', myturn: false, bogus: true }, relayUrl: 'x' })));
+  check('settings: only real true values count, unknown switches and old settings are dropped', old.readKinds.translations === false && old.readKinds.myturn === false && !('bogus' in old.readKinds) && !('relayUrl' in old));
 }
 
 {
@@ -79,22 +59,6 @@ import { load, READ_KINDS } from '../src/settings.ts';
 }
 
 {
-  const { NEURAL_VOICES, naturalVoice, cleanNaturalVoices, neuralOptions } = await import('../src/neuralVoices.ts');
-  const langs = ['English', 'Korean', 'Japanese', 'Chinese - Mandarin', 'Chinese - Cantonese', 'Spanish', 'Portuguese', 'French', 'German', 'Thai', 'Vietnamese', 'Filipino'];
-  check('every language (not Hawaiian) has a female AND a male natural voice', langs.every((l) => NEURAL_VOICES[l]?.some((v) => v.gender === 'female') && NEURAL_VOICES[l]?.some((v) => v.gender === 'male')) && !NEURAL_VOICES.Hawaiian);
-  check('every voice id looks like a neural voice name (the worker only accepts those)', Object.values(NEURAL_VOICES).flat().every((v) => /^[a-z]{2,3}-[A-Z]{2}-[A-Za-z]+Neural$/.test(v.id)));
-  check('defaults = the default voices', naturalVoice('English') === 'en-US-JennyNeural' && naturalVoice('Korean') === 'ko-KR-SunHiNeural' && naturalVoice('Hawaiian') === '');
-  check('a picked voice is used, an unknown one falls back to the default', naturalVoice('Korean', { Korean: 'ko-KR-InJoonNeural' }) === 'ko-KR-InJoonNeural' && naturalVoice('Korean', { Korean: 'x' }) === 'ko-KR-SunHiNeural');
-  check('saved picks are cleaned', JSON.stringify(cleanNaturalVoices({ Korean: 'ko-KR-InJoonNeural', English: 'evil', Klingon: 'x' })) === JSON.stringify({ Korean: 'ko-KR-InJoonNeural' }));
-  check('options: Female and Male groups', neuralOptions('Korean').includes('label="Female"') && neuralOptions('Korean').includes('label="Male"') && neuralOptions('Korean').includes('InJoon'));
-  const st = await load({ get: async () => '', set: async () => undefined });
-  check('settings: the iPhone voice is the default engine (speed first), natural voices are an option', st.voiceEngine === 'iphone' && JSON.stringify(st.naturalVoices) === '{}'
-    && (await load({ get: async () => JSON.stringify({ voiceEngine: 'natural' }), set: async () => undefined })).voiceEngine === 'natural');
-}
-
-console.log(fails ? `${fails} FAILED` : 'ALL PASS');
-
-{
   const { ReadAloud, silentWav, LEAD_IN_MS } = await import('../src/readAloud.ts');
   const w = silentWav(350);
   const txt = (a, b) => String.fromCharCode(...w.slice(a, b));
@@ -111,12 +75,6 @@ console.log(fails ? `${fails} FAILED` : 'ALL PASS');
   URL.createObjectURL = (blob) => { const u = realCreate(blob); if (blob.type === 'audio/wav') wavs.add(u); return u; };
   const origPlay = globalThis.Audio.prototype.play;
   globalThis.Audio.prototype.play = function () { this.isSilence = wavs.has(this.src); return origPlay.call(this); };
-  const r = new ReadAloud();
-  r.leadInMs = 40;
-  r.fetchAudio = async (text) => new Blob([text]);
-  r.speakNatural('Hello there.', 'voice', () => events.push('fallback'));
-  await sleep(250);
-  check('natural voice: the silence plays first, then the speech', events[0] === 'silence' && events.length >= 2 && events[1].startsWith('play:blob:') && !events.includes('fallback'), JSON.stringify(events));
   events.length = 0;
   const spoken = [];
   globalThis.SpeechSynthesisUtterance = class { constructor(t) { this.text = t; } };
@@ -142,4 +100,5 @@ console.log(fails ? `${fails} FAILED` : 'ALL PASS');
   await sleep(150);
   check('no audio player: it still speaks after the pause', spoken[0] === 'Still said.', JSON.stringify(spoken));
 }
+console.log(fails ? `${fails} FAILED` : 'ALL PASS');
 process.exit(fails ? 1 : 0);

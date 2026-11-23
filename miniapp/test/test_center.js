@@ -13,7 +13,7 @@ check('3 lines in a 6-line box -> 1 blank line above', wrappedLines(three) === 3
 const long = three.repeat(3);
 check('text that fills the box is not padded (starts at the top, scrolls)', wrappedLines(long) >= 6 && pad(centerV(long, 6)) === 0);
 check('title + blank + answer counts all its lines', wrappedLines('Q\n\nshort answer') === 3 && pad(centerV('Q\n\nshort answer', 6)) === 1);
-check('conversation box (4 lines): 2 lines -> 1 blank above', pad(centerV('You: hi\nHermes: hello', 4)) === 1);
+check('conversation box (4 lines): 2 lines -> 1 blank above', pad(centerV('You: hi\nThem: hello', 4)) === 1);
 check('re-centering is stable (old padding is replaced, not added to)', centerV(centerV('one line', 6), 6) === centerV('one line', 6));
 check('empty text untouched', centerV(' ', 6) === ' ');
 check('bottomV: one line in a 4-line box -> 3 blank lines above', pad(bottomV('안녕하세요', 4)) === 3);

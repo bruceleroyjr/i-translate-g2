@@ -1,7 +1,6 @@
 
 import type { Store } from './settings.ts';
-import type { TrLine } from './phoneTranslate.ts';
-import { esc } from './phoneToday.ts';
+import { esc, type TrLine } from './phoneTranslate.ts';
 
 export interface RecMeta {
   id: string;

@@ -1,5 +1,8 @@
 
-import { esc } from './phoneToday.ts';
+
+export function esc(s: string): string {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+}
 
 export interface TrLine {
   who: 'them' | 'me'; original: string; text: string; at: number;
@@ -63,12 +66,6 @@ export function turnControls(s: TurnState): { status: string; buttons: { id: str
   }
   if (s.sending) return { status: `Translating into ${s.from}…`, buttons: [{ id: 'tr-send', label: 'Translating…', cls: 'secondary', disabled: true }, back] };
   return { status: 'Your turn. Tap Speak again for another line.', buttons: [{ id: 'tr-again', label: 'Speak again', cls: '' }, back] };
-}
-
-export function controlsHtml(s: TurnState): string {
-  const c = turnControls(s);
-  return `<div class="tr-status">${esc(c.status)}</div>`
-    + c.buttons.map((b) => `<button type="button" id="${b.id}" class="${b.cls}"${b.disabled ? ' disabled' : ''}>${esc(b.label)}</button>`).join('');
 }
 
 export interface PhoneIdea { kind: 'reply' | 'ask'; text: string }
