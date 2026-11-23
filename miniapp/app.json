@@ -1,0 +1,38 @@
+{
+  "package_id": "com.example.itranslate",
+  "edition": "202601",
+  "name": "I-Translate",
+  "version": "0.4.11",
+  "min_app_version": "2.2.10",
+  "min_sdk_version": "0.0.16",
+  "entrypoint": "index.html",
+  "permissions": [
+    {
+      "name": "network",
+      "desc": "Sends what is said, while you translate, to Soniox (speech to text) and the text to the AI you pick (Claude, OpenAI, Gemini, DeepSeek, Grok, Mistral, Groq or OpenRouter), with your own API keys. Nothing else.",
+      "whitelist": [
+        "https://api.anthropic.com",
+        "https://api.openai.com",
+        "https://generativelanguage.googleapis.com",
+        "https://api.deepseek.com",
+        "https://api.x.ai",
+        "https://api.mistral.ai",
+        "https://api.groq.com",
+        "https://openrouter.ai",
+        "https://api.soniox.com",
+        "wss://stt-rt.soniox.com"
+      ]
+    },
+    {
+      "name": "g2-microphone",
+      "desc": "While translating, the glasses mics hear your turn (and the other person, unless you pick the iPhone mic). Streamed to Soniox, never stored."
+    },
+    {
+      "name": "phone-microphone",
+      "desc": "While translating, the iPhone mic can hear the person across from you better than the glasses. Streamed to Soniox, never stored."
+    }
+  ],
+  "supported_languages": [
+    "en"
+  ]
+}

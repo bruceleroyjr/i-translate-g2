@@ -1,0 +1,22 @@
+{
+  "name": "i-translate",
+  "version": "0.4.11",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 5173",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "pack": "evenhub pack app.json dist -o i-translate.ehpk"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.6.0",
+    "@evenrealities/even_hub_sdk": "^0.0.16",
+    "@evenrealities/pretext": "^0.1.4"
+  },
+  "devDependencies": {
+    "@evenrealities/evenhub-cli": "^0.2.0",
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0"
+  }
+}

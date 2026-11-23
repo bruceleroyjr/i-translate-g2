@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>I-Translate</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0e1013; --card: #171a1f; --card2: #20242a; --line: #2a2f36; --knob: #3a404a;
+      --text: #f2f4f7; --text2: #a9b1bc; --dim: #8b95a1; --chev: #5e6772;
+      --accent: #2f6fdb; --accent-text: #7faeff; --ok: #3fd07a; --warn: #f2b33d; --rec: #ff6b5e;
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; }
+    html, body { background: var(--bg); }
+    body { margin: 0; color: var(--text); font: 16px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, sans-serif;
+      -webkit-font-smoothing: antialiased; padding: calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 100px); }
+    button, select, input { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    button:disabled { opacity: .5; cursor: default; }
+    h1 { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -.5px; }
+    h2 { margin: 0; }
+    [hidden] { display: none !important; }
+
+    .tab, .page { display: none; }
+    .tab.on, .page.on { display: block; }
+    #tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: grid; grid-template-columns: repeat(3, 1fr);
+      padding: 8px 12px calc(env(safe-area-inset-bottom) + 8px); background: rgba(23, 26, 31, .96); border-top: 1px solid var(--line);
+      -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+    #tabs button { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 0; border: 0; background: none;
+      color: var(--dim); font-size: 11px; font-weight: 500; position: relative; }
+    #tabs button.on { color: var(--accent-text); font-weight: 600; }
+    #tabs button.warn::after { content: ""; position: absolute; top: 2px; left: calc(50% + 10px); width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
+
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0 16px; }
+    .card { background: var(--card); border-radius: var(--radius); }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--dim); flex: none; }
+    .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.rec { background: var(--rec); } .dot.blue { background: var(--accent-text); }
+    .status-chip { display: flex; align-items: center; gap: 6px; padding: 7px 11px; border: 0; border-radius: 999px; background: var(--card);
+      color: var(--text2); font-size: 13px; white-space: nowrap; }
+    .group-title { margin: 22px 0 6px 14px; font-size: 13px; font-weight: 500; color: var(--dim); }
+    .note { margin: 6px 14px 0; font-size: 13px; line-height: 1.45; color: var(--dim); }
+    .list { list-style: none; margin: 0; padding: 0 0 0 14px; background: var(--card); border-radius: var(--radius); }
+    .list > li, .list > .row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); }
+    .list > :last-child { border-bottom: 0; }
+    .row-label { flex: 1; min-width: 0; font-size: 16px; }
+    .row-label small { display: block; margin-top: 2px; font-size: 13px; color: var(--dim); }
+    .value { color: var(--dim); font-size: 15px; white-space: nowrap; }
+    button.nav { width: 100%; border: 0; background: none; text-align: left; }
+    .nav .chev, .feed-row .chev { color: var(--chev); flex: none; }
+    .tile { width: 30px; height: 30px; flex: none; border-radius: 9px; display: flex; align-items: center; justify-content: center; }
+    .tile.blue { color: #8db7ff; background: rgba(127, 174, 255, .14); }
+    .tile.amber { color: #f2c46d; background: rgba(242, 179, 61, .14); }
+    .tile.green { color: #6fdda0; background: rgba(63, 208, 122, .14); }
+    .tile.grey { color: #c9d0d8; background: #252a31; }
+    .back { display: flex; align-items: center; gap: 2px; height: 36px; margin: 0 0 6px -6px; padding: 0 6px; border: 0; background: none;
+      color: var(--accent-text); font-size: 16px; }
+    .page h1 { font-size: 28px; margin-bottom: 4px; }
+
+    select.inline { max-width: 60%; border: 1px solid rgba(127,174,255,.45); border-radius: 9px; color: var(--accent-text); font-size: 15px; font-weight: 600;
+      text-align: right; text-align-last: right; -webkit-appearance: none; appearance: none; padding: 6px 24px 6px 10px;
+      background: rgba(47,111,219,.18) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237faeff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 8px center; }
+    select.block, input.block { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card2);
+      color: var(--text); font-size: 16px; }
+    .list > .stack { flex-direction: column; align-items: stretch; gap: 6px; }
+    .stack label { font-size: 13px; color: var(--dim); }
+    .stack .segs { align-self: flex-start; }
+    input.num { width: 84px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card2); text-align: right; }
+    input[type=time] { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card2); color: var(--text); }
+
+    input.switch, button.vol.switch { -webkit-appearance: none; appearance: none; position: relative; flex: none; width: 51px; height: 31px; margin: 0;
+      padding: 0; border: 0; border-radius: 999px; background: var(--knob); transition: background .15s; }
+    input.switch::after, button.vol.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%;
+      background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .35); transition: left .15s; }
+    input.switch:checked, button.vol.switch.on { background: var(--accent); }
+    input.switch:checked::after, button.vol.switch.on::after { left: 22px; }
+
+    select.seg { display: none; }
+    .segs { display: flex; flex: none; padding: 3px; border-radius: 10px; background: var(--card2); }
+    .segs button { min-width: 70px; height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: none; color: var(--text2); font-size: 14px; font-weight: 500; }
+    .segs button.on { background: var(--knob); color: var(--text); font-weight: 600; }
+
+    .btn { width: 100%; height: 50px; margin-top: 14px; border: 0; border-radius: 14px; background: var(--accent); color: #fff; font-size: 17px; font-weight: 600; }
+    .btn.secondary { background: var(--card2); color: var(--text); }
+    .btn.danger { background: rgba(255, 107, 94, .14); color: #ff9187; }
+    .btn.link { height: auto; margin: 0; padding: 0; background: none; color: var(--accent-text); font-size: 16px; font-weight: 400; text-align: left; }
+
+    .now { padding: 16px; }
+    .now-head { display: flex; align-items: center; gap: 10px; }
+    .now-head .dot { width: 10px; height: 10px; }
+    .now-head .dot.ok { box-shadow: 0 0 0 4px rgba(63, 208, 122, .18); }
+    .now-head .dot.rec { box-shadow: 0 0 0 4px rgba(255, 107, 94, .2); }
+    #now-title { font-size: 22px; font-weight: 600; }
+    #now-sub { margin: 6px 0 0 20px; font-size: 14px; color: var(--text2); }
+    #mode { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; color: var(--text2); }
+    #mode:empty { display: none; }
+    #mode p { margin: 0; } #mode p + p { margin-top: 4px; }
+    .actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 12px 0 0; }
+    .action { height: 76px; border: 0; border-radius: var(--radius); background: var(--card2); color: var(--text); display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 6px; font-size: 14px; font-weight: 500; }
+    .action.on { background: rgba(47, 111, 219, .22); color: #cfe0ff; }
+    .action.rec { background: rgba(255, 107, 94, .16); color: #ffc2bc; }
+    .feed-head { display: flex; align-items: baseline; justify-content: space-between; margin: 24px 0 10px; }
+    .feed-head h2 { font-size: 20px; font-weight: 600; }
+    #today-date { font-size: 13px; color: var(--dim); }
+    .chips { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px 12px; padding: 0 16px; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { flex: none; height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: #c9d0d8; font-size: 14px; font-weight: 500; }
+    .chip.on { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 600; }
+    .chip-n { opacity: .75; }
+    .feed-list { list-style: none; margin: 0; padding: 0 14px; background: var(--card); border-radius: var(--radius); }
+    .feed-item { border-bottom: 1px solid var(--line); }
+    .feed-item:last-child { border-bottom: 0; }
+    .feed-row { width: 100%; min-height: 60px; display: flex; align-items: center; gap: 12px; padding: 10px 0; border: 0; background: none; text-align: left; }
+    .feed-icon { width: 32px; height: 32px; flex: none; border-radius: 10px; background: var(--card2); color: var(--text2); display: flex; align-items: center; justify-content: center; }
+    .feed-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+    .feed-title { font-size: 15px; font-weight: 500; overflow-wrap: anywhere; }
+    .feed-item:not(.open) .feed-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .feed-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: var(--dim); }
+    .feed-item.open .chev { transform: rotate(90deg); }
+    .tag { padding: 1px 7px; border-radius: 6px; font-size: 12px; font-weight: 500; }
+    .tag-work { color: #f2c46d; background: rgba(242, 179, 61, .12); }
+    .tag-personal { color: #8db7ff; background: rgba(127, 174, 255, .12); }
+    .live { color: var(--warn); font-size: 12px; }
+    .feed-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.5; color: var(--text); padding: 0 0 14px 44px; }
+    .feed-empty { margin: 0; padding: 18px 14px; background: var(--card); border-radius: var(--radius); color: var(--dim); font-size: 15px; }
+    .feed-more { width: 100%; margin-top: 10px; height: 40px; border: 1px solid var(--line); border-radius: 12px; background: none; color: var(--text2); font-size: 14px; }
+
+    .lang-card { padding: 14px; }
+    .pair { display: grid; grid-template-columns: minmax(0, 1fr) 40px minmax(0, 1fr); align-items: center; gap: 8px; }
+    .lang { position: relative; display: flex; flex-direction: column; justify-content: center; height: 64px; padding: 0 14px; border-radius: 14px; background: var(--card2); }
+    .lang span { font-size: 12px; color: var(--dim); }
+    .lang select { -webkit-appearance: none; appearance: none; border: 0; background: none; padding: 0; font-size: 17px; font-weight: 600; width: 100%; text-overflow: ellipsis; }
+    .lang:has(.spk) { padding-right: 44px; }
+    .lang .spk { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; padding: 0; display: grid; place-items: center;
+      border-radius: 50%; border: 1px solid var(--line); background: none; color: var(--dim); }
+    .lang .spk.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .lang .spk .i-on, .lang .spk.on .i-off { display: none; }
+    .lang .spk.on .i-on { display: block; }
+    #btn-swap { width: 40px; height: 40px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: none; color: var(--text2); display: flex; align-items: center; justify-content: center; }
+    .lang-card .mic-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
+    .tr-feed { margin-top: 14px; }
+    #btn-translate { width: 100%; height: 60px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 16px; border: 0;
+      border-radius: 16px; background: var(--accent); color: #fff; font-size: 18px; font-weight: 700; }
+    #btn-translate .sub { font-size: 13px; font-weight: 500; opacity: .8; }
+    #btn-translate.danger { height: 46px; margin-top: 8px; background: rgba(255, 107, 94, .14); color: #ff9187; border: 1.5px solid rgba(255, 107, 94, .35); font-size: 16px; }
+    .composer-wrap.idle > :not(#btn-translate) { display: none; }
+    .tr-feed { padding: 2px 14px; }
+    .tr-box { max-height: 46vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .tr-box .hint { padding: 16px 0; color: var(--dim); font-size: 14px; }
+    .tr-line { padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .tr-line:last-child { border-bottom: 0; }
+    .tr-orig { font-size: 14px; color: var(--text2); overflow-wrap: anywhere; }
+    .tr-time { margin-right: 8px; font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+    .tr-who { margin-right: 8px; font-size: 12px; color: var(--dim); }
+    .tr-me .tr-who { color: var(--accent-text); }
+    .tr-text { margin-top: 2px; font-size: 17px; line-height: 1.4; overflow-wrap: anywhere; }
+    .audio-row { display: flex; gap: 8px; margin-top: 12px; }
+    button.vol.chip-toggle { flex: 1; height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 8px; border-radius: 10px;
+      border: 1px solid var(--line); background: var(--card); color: var(--dim); font-size: 13px; }
+    button.vol.chip-toggle.on { color: #c9d0d8; border-color: #35507e; background: rgba(47, 111, 219, .14); }
+    button.vol.chip-toggle.on svg { color: var(--accent-text); }
+    .h-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 2px 12px; }
+    #h-count { font-size: 15px; color: var(--text2); font-variant-numeric: tabular-nums; }
+    .h-sort { display: flex; gap: 8px; }
+    .h-sort span, .h-sort button { height: 38px; display: flex; align-items: center; gap: 6px; padding: 0 12px; border-radius: 10px; border: 0;
+      background: #f4f6f8; color: #1f242b; font-size: 14px; }
+    .h-sort button { width: 42px; justify-content: center; padding: 0; }
+    #h-list { display: flex; flex-direction: column; gap: 8px; }
+    .h-card { width: 100%; display: flex; align-items: center; gap: 12px; padding: 16px 14px 16px 18px; border: 0; border-radius: 12px;
+      background: #f4f6f8; color: #111827; text-align: left; }
+    .h-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+    .h-title { font-size: 17px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .h-sub { display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: #6b7280; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .h-dotsep { font-size: 9px; }
+    .h-swap { flex: none; }
+    .h-new { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #f5d94a; box-shadow: 0 0 0 2px #2b2b2b; }
+    .h-new.rec { background: #ff6b5e; box-shadow: none; animation: hblink 1.2s infinite; }
+    @keyframes hblink { 50% { opacity: .35; } }
+    @media (prefers-reduced-motion: reduce) { .h-new.rec { animation: none; } }
+    .h-chev { flex: none; color: #9aa1ab; display: flex; }
+    .h-empty { padding: 28px 16px; border-radius: 12px; background: var(--card); color: var(--text2); font-size: 15px; line-height: 1.5; text-align: center; }
+    .h-danger { width: 100%; height: 46px; margin-top: 18px; border: 1.5px solid rgba(255, 107, 94, .35); border-radius: 14px;
+      background: rgba(255, 107, 94, .1); color: #ff9187; font-size: 15px; font-weight: 600; }
+    .h-confirm { margin-top: 12px; padding: 14px; border-radius: 14px; background: var(--card); }
+    .h-confirm p { margin: 0 0 12px; font-size: 15px; line-height: 1.45; }
+    .h-confirm div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .h-confirm button { height: 44px; border: 0; border-radius: 12px; font-size: 15px; font-weight: 600; background: var(--card2); color: var(--text); }
+    .h-confirm button.yes { background: #d9483d; color: #fff; }
+    #h-d-title { font-size: 26px; line-height: 1.2; text-wrap: balance; }
+    .h-d-sub { display: flex; align-items: center; gap: 6px; margin: 8px 0 14px; color: var(--text2); font-size: 14px; font-variant-numeric: tabular-nums; }
+    #h-d-summary { margin: 0 0 14px; padding: 14px; border-radius: 14px; background: var(--card); font-size: 15.5px; line-height: 1.5; }
+    #h-d-summary:empty { display: none; }
+    .tr-box.h-d-lines { max-height: none; }
+    .tab[data-tab="history"].on { padding-bottom: 96px; }
+    .tab[data-tab="translate"].on, .tab[data-tab="talk"].on { padding-bottom: 96px; }
+    .composer-wrap { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 64px); z-index: 9; padding: 8px 16px 10px;
+      background: linear-gradient(to bottom, rgba(14, 16, 19, 0), var(--bg) 14px); }
+    .composer { display: flex; align-items: center; gap: 8px; margin: 0; padding: 5px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); }
+    .composer:focus-within { border-color: #35507e; }
+    .composer input { flex: 1; min-width: 0; height: 40px; padding: 0 4px; border: 0; background: none; color: var(--text); font-size: 16px; outline: none; }
+    .composer input::placeholder { color: var(--dim); }
+    .composer .mic { flex: none; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: var(--card2); color: var(--text);
+      display: flex; align-items: center; justify-content: center; }
+    .composer .mic.rec { background: rgba(255, 107, 94, .18); color: #ff9187; }
+    #tr-mic, .composer .slot { display: contents; }
+    #talk-send, #btn-type-send { flex: none; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: var(--accent); color: #fff;
+      display: flex; align-items: center; justify-content: center; }
+    #type-note:empty, #talk-note:empty { display: none; }
+    .talk-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: -4px 0 14px; }
+    .talk-chips .status-chip { padding: 6px 11px; }
+    .talk-chips button.vol.chip-toggle { flex: none; height: 32px; padding: 0 11px; border-radius: 999px; }
+    .talk-feed { display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; min-height: calc(100vh - 330px); }
+    .talk-empty { margin: auto 0; padding: 24px 12px; text-align: center; color: var(--dim); font-size: 15px; line-height: 1.5; }
+    .bubble-row { display: flex; flex-direction: column; gap: 4px; max-width: 84%; }
+    .bubble-row.me { align-self: flex-end; align-items: flex-end; }
+    .bubble-row.hermes { align-self: flex-start; align-items: flex-start; }
+    .bubble-label { display: flex; align-items: center; gap: 6px; padding: 0 6px; font-size: 11px; color: var(--dim); }
+    .hermes .bubble-label { color: var(--accent-text); }
+    .bubble { padding: 10px 14px; border-radius: 18px; font-size: 16px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .me .bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 6px; }
+    .hermes .bubble { background: var(--card2); border-bottom-left-radius: 6px; }
+    .me .bubble.live { background: rgba(47, 111, 219, .12); border: 1.5px dashed #4a6fb0; color: #dce6f8; }
+    .live-label { color: #ff9187; }
+    .rec-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--rec); }
+    .muted { color: var(--dim); }
+    .dots { display: inline-flex; gap: 4px; padding: 4px 0; }
+    .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--text2); animation: dot 1.2s infinite ease-in-out; }
+    .dots i:nth-child(2) { animation-delay: .15s; } .dots i:nth-child(3) { animation-delay: .3s; }
+    @keyframes dot { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+    #talk-line, #tr-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 4px 6px; }
+    .tr-back { flex: none; padding: 0; border: 0; background: none; color: var(--accent-text); font-size: 13px; }
+    .tr-feed { padding: 10px; }
+    .tr-box { display: flex; flex-direction: column; gap: 8px; }
+    .tr-line.tr-them, .tr-line.tr-me { max-width: 84%; padding: 9px 13px; border: 0; border-radius: 18px; }
+    .tr-line.tr-them { align-self: flex-start; background: var(--card2); border-bottom-left-radius: 6px; }
+    .tr-line.tr-me { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 6px; }
+    .tr-me .tr-orig, .tr-me .tr-time { color: rgba(255, 255, 255, .78); }
+    .tr-line.tr-them .tr-who, .tr-line.tr-me .tr-who { display: none; }
+    #tr-controls .tr-status, #talk-line .tr-status { margin: 14px 2px 0; font-size: 13px; color: var(--dim); overflow-wrap: anywhere; }
+    #tr-controls:has(.turn-card) { display: block; margin: 0 0 8px; }
+    .turn-card { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px 14px; border-radius: 16px; background: var(--card); border: 1.5px solid #1f5a33; }
+    .turn-hd { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; font-weight: 700; letter-spacing: .08em; color: #6fdda0; }
+    .turn-hd > span { display: flex; align-items: center; gap: 7px; }
+    .turn-dot { width: 8px; height: 8px; border-radius: 50%; background: #3fd07a; }
+    .turn-card.listen .turn-dot { background: var(--rec); animation: turnblink 1.2s infinite; }
+    @keyframes turnblink { 50% { opacity: .35; } }
+    @media (prefers-reduced-motion: reduce) { .turn-card.listen .turn-dot { animation: none; } }
+    .turn-x { flex: none; padding: 4px 0; border: 0; background: none; color: var(--dim); font-size: 13px; font-weight: 600; letter-spacing: 0; }
+    .turn-said { font-size: 19px; line-height: 1.35; font-weight: 500; overflow-wrap: anywhere; max-height: 5.4em; overflow-y: auto; }
+    .turn-said.wait, .turn-tr.wait { color: var(--dim); font-weight: 400; font-size: 15px; }
+    .turn-tr { padding-top: 8px; border-top: 1px solid var(--line); font-size: 16px; line-height: 1.4; color: #a7f3c4; overflow-wrap: anywhere; max-height: 4.2em; overflow-y: auto; }
+    .turn-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .turn-btns button { height: 46px; border: 0; border-radius: 12px; background: var(--card2); color: var(--text); font-size: 16px; font-weight: 600; }
+    .turn-btns button.go { background: #2f7a45; color: #fff; }
+    .turn-btns button.blue { background: var(--accent); color: #fff; }
+    .turn-btns button:disabled { opacity: .55; }
+    .tab[data-tab="translate"].myturn .lang-card { display: none; }
+    .tab[data-tab="translate"].on:has(.turn-card) { padding-bottom: 330px; }
+
+    .kinds-head { display: flex; justify-content: space-between; margin: 22px 14px 6px; font-size: 13px; font-weight: 500; color: var(--dim); }
+    .kinds-head span:last-child { display: flex; gap: 18px; }
+    .kind-row select.inline { width: 132px; max-width: none; }
+    .kind-row .no-time { width: 132px; text-align: right; color: var(--dim); font-size: 15px; }
+    #voice-train { margin-top: 4px; }
+    #voice-sentence { font-size: 20px; font-weight: 600; margin: 8px 0; }
+    .gesture-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+    .gesture-pair .card { padding: 14px; }
+    .gesture-pair small { display: block; font-size: 13px; color: var(--dim); }
+    .gesture-pair strong { display: block; margin-top: 2px; font-size: 20px; font-weight: 600; }
+    .gesture-pair span { display: block; margin-top: 4px; font-size: 13px; color: var(--text2); }
+    .gestures > li { flex-direction: column; align-items: flex-start; gap: 3px; padding: 12px 14px 12px 0; }
+    .gestures strong { font-size: 15px; font-weight: 600; }
+    .gestures span { font-size: 14px; line-height: 1.4; color: var(--text2); }
+    .tr-feed { background: #f4f6f8; color: #111827; }
+    .tr-bar { display: flex; justify-content: space-between; padding: 0 4px 8px; font-size: 12px; font-weight: 600; letter-spacing: .06em; color: #4b5563; }
+    .tr-feed .tr-box .hint { color: #6b7280; }
+    .tr-line.tr-them { background: #2563eb; color: #ffffff; }
+    .tr-line.tr-them .tr-orig, .tr-line.tr-them .tr-time { color: rgba(255, 255, 255, .82); }
+    .tr-line.tr-me { background: #15803d; color: #ffffff; }
+    .tr-line.tr-me .tr-orig, .tr-line.tr-me .tr-time { color: rgba(255, 255, 255, .82); }
+    .tr-feed .tr-box::-webkit-scrollbar-thumb { background: #c4ccd4; }
+    .tr-line .tr-orig, .tr-line .tr-text { display: flex; align-items: center; gap: 8px; }
+    .tr-line .tr-words { flex: 1 1 auto; min-width: 0; }
+    .tr-play { flex: none; display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; }
+    .tr-play svg { margin-left: 2px; }
+    .tr-line.tr-them .tr-play { background: rgba(255, 255, 255, .22); color: #ffffff; }
+    .tr-line.tr-me .tr-play { background: rgba(255, 255, 255, .22); color: #ffffff; }
+    #tr-ideas { display: flex; flex-direction: column; gap: 6px; margin: 0 0 6px; }
+    #tr-ideas:empty { display: none; }
+    .tab[data-tab="translate"].on:has(.composer-wrap:not(.idle)) { padding-bottom: 150px; }
+    .tab[data-tab="translate"].on:has(#tr-ideas:not(:empty)) { padding-bottom: 274px; }
+    .tr-idea { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid #8b5cf6;
+      border-radius: 14px; background: #1e1534; color: #ffffff; text-align: left; font-size: 15px; line-height: 1.3; }
+    .tr-idea:disabled { opacity: .55; }
+    .tr-idea.said { background: #6d28d9; border-color: #6d28d9; }
+    .tr-idea-k { flex: none; width: 44px; font-size: 11px; font-weight: 700; letter-spacing: .06em; color: #c4b5fd; }
+    .tr-idea.said .tr-idea-k { width: auto; color: rgba(255, 255, 255, .82); }
+    .tr-idea-t { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+    .tr-idea-play { flex: none; display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0 0 0 2px; border: 0;
+      border-radius: 50%; background: rgba(255, 255, 255, .22); color: #ffffff; }
+    .tr-idea-note { font-size: 13px; color: var(--dim); margin: 0 4px; }
+    .talk-panel { background: #f4f6f8; color: #111827; border-radius: var(--radius); padding: 10px; }
+    .talk-panel .talk-feed { min-height: calc(100vh - 360px); }
+    .talk-panel .talk-empty, .talk-panel .muted { color: #6b7280; }
+    .talk-panel .bubble-label { color: #6b7280; }
+    .talk-panel .hermes .bubble-label { color: #1d4ed8; font-weight: 600; }
+    .talk-panel .hermes .bubble { background: #2563eb; color: #ffffff; }
+    .talk-panel .me .bubble { background: #15803d; color: #ffffff; }
+    .talk-panel .me .bubble.live { background: rgba(21, 128, 61, .08); border: 1.5px dashed #15803d; color: #14532d; }
+    .talk-panel .live-label { color: #c2410c; }
+    .talk-panel .dots i { background: rgba(255, 255, 255, .85); }
+    .talk-panel .hermes .muted { color: rgba(255, 255, 255, .82); }
+    .tr-sound { margin-top: 12px; padding: 12px 14px; display: grid; gap: 10px; }
+    .tr-sound-head, .tr-sound-row { display: grid; grid-template-columns: 48px 150px minmax(0, 1fr); align-items: center; gap: 10px; }
+    .tr-sound-head { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+    .tr-sound-who { font-size: 15px; font-weight: 600; }
+    .tr-sound .segs button { flex: 1; min-width: 0; padding: 0 8px; }
+    .tr-sound button.vol.chip-toggle { height: 38px; }
+  </style>
+</head>
+<body>
+  <div class="tab" data-tab="translate" role="tabpanel" aria-label="Translate">
+    <div class="top">
+      <h1>I-Translate</h1>
+      <button type="button" class="status-chip" data-go="connection" aria-label="Connection"><span class="dot" id="status-dot"></span><span id="status">Starting…</span></button>
+    </div>
+    <section class="card lang-card" aria-label="Languages">
+      <div class="pair">
+        <label class="lang"><span>They speak</span><select id="translate-from" aria-label="Spoken language"></select><button type="button" class="vol spk" data-read="translations" aria-label="Play what they say aloud"><svg class="i-on" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9zM16.5 8.5a5 5 0 0 1 0 7"></path></svg><svg class="i-off" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9zM17 9l5 6M22 9l-5 6"></path></svg></button></label>
+        <button type="button" id="btn-swap" aria-label="Swap languages">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h12l-3-3M17 17H5l3 3"></path></svg></button>
+        <label class="lang"><span>You read</span><select id="translate-to" aria-label="Translate into"></select><button type="button" class="vol spk" data-read="myturn" aria-label="Play what I say aloud"><svg class="i-on" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9zM16.5 8.5a5 5 0 0 1 0 7"></path></svg><svg class="i-off" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9zM17 9l5 6M22 9l-5 6"></path></svg></button></label>
+      </div>
+    </section>
+
+    <section class="card tr-feed" aria-label="Conversation">
+      <div class="tr-bar"><span>CONVERSATION</span><span id="tr-pair"></span></div>
+      <div id="tr-live" class="tr-box"></div>
+    </section>
+    <section class="card tr-sound" aria-label="Microphones and sound">
+      <div class="tr-sound-head"><span></span><span>Mic</span><span>Sound</span></div>
+      <div class="tr-sound-row">
+        <span class="tr-sound-who">Them</span>
+        <select id="translate-mic" class="seg" aria-label="Microphone that hears the other person">
+          <option value="phone" data-short="iPhone">iPhone mic (hears the other person best: keep the phone out, app open)</option>
+          <option value="glasses" data-short="Glasses">Glasses mics (the default: nothing to hold)</option>
+        </select>
+        <button type="button" class="vol chip-toggle" data-read="translations" aria-label="Play what they say aloud">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9zM16.5 8.5a5 5 0 0 1 0 7"></path></svg>
+          <span id="lbl-theirs">Play aloud</span></button>
+      </div>
+      <div class="tr-sound-row">
+        <span class="tr-sound-who">You</span>
+        <select id="my-turn-mic" class="seg" aria-label="Microphone that hears you on your turn">
+          <option value="phone" data-short="iPhone">iPhone mic (no voice ID check: keep the phone close to you)</option>
+          <option value="glasses" data-short="Glasses">Glasses mics (aimed at your voice)</option>
+        </select>
+        <button type="button" class="vol chip-toggle" data-read="myturn" aria-label="Play what I say aloud">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9zM16.5 8.5a5 5 0 0 1 0 7"></path></svg>
+          <span id="lbl-mine">Play aloud</span></button>
+      </div>
+    </section>
+    <div class="composer-wrap idle" id="tr-dock">
+      <div id="tr-ideas"></div>
+      <div id="tr-controls"></div>
+      <p class="note" id="type-note" style="margin: 0 4px 6px"></p>
+      <form class="composer" id="type-turn" autocomplete="off">
+        <span id="tr-mic"></span>
+        <input id="type-text" type="text" maxlength="600" enterkeyhint="send" autocapitalize="sentences" placeholder="Type what you want to say" aria-label="Type your turn" />
+        <button type="submit" id="btn-type-send" aria-label="Send typed text">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"></path></svg></button>
+      </form>
+      <button type="button" id="btn-translate"><span id="tr-go">Start translating</span><span class="sub" id="tr-go-sub"></span></button>
+    </div>
+  </div>
+
+  <div class="tab" data-tab="history" role="tabpanel" aria-label="History">
+    <div id="h-list-view">
+      <div class="top"><h1>History</h1></div>
+      <div class="h-bar">
+        <span id="h-count">0 Records</span>
+        <div class="h-sort"><span>Date created</span>
+          <button type="button" id="h-sort" aria-label="Newest first"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path id="h-sort-icon" d="M7 4v16M3 16l4 4 4-4M14 6h7M14 12h5M14 18h3"></path></svg></button></div>
+      </div>
+      <div id="h-list"></div>
+      <button type="button" class="h-danger" id="h-clear-all" hidden>Delete all recordings</button>
+      <div class="h-confirm" id="h-clear-confirm" hidden>
+        <p id="h-clear-text">Delete all recordings from this phone? This can't be undone.</p>
+        <div><button type="button" id="h-clear-no">Cancel</button><button type="button" class="yes" id="h-clear-yes">Delete all</button></div>
+      </div>
+    </div>
+    <div id="h-detail" hidden>
+      <button type="button" class="back" id="h-back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg>History</button>
+      <h1 id="h-d-title"></h1>
+      <div class="h-d-sub" id="h-d-sub"></div>
+      <p id="h-d-summary"></p>
+      <section class="card tr-feed" aria-label="Conversation"><div class="tr-bar"><span>CONVERSATION</span><span id="h-d-pair"></span></div><div class="tr-box h-d-lines" id="h-d-lines"></div></section>
+      <button type="button" class="h-danger" id="h-del">Delete recording</button>
+      <div class="h-confirm" id="h-del-confirm" hidden>
+        <p>Delete this recording from this phone? This can't be undone.</p>
+        <div><button type="button" id="h-del-no">Cancel</button><button type="button" class="yes" id="h-del-yes">Delete</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab" data-tab="settings" role="tabpanel" aria-label="Settings">
+    <div class="page" data-page="root">
+      <div class="top"><h1>Settings</h1></div>
+
+      <h2 class="group-title" style="margin-top: 4px">Translation</h2>
+      <div class="list">
+        <button type="button" class="row nav" data-go="translation"><span class="tile amber"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h9M8.5 3v2M6 5c.8 3.4 3 6 6 7.5M11 5c-.9 3.7-3.4 6.6-7 8M13 21l4-9 4 9M14.5 18h5"></path></svg></span>
+          <span class="row-label">On the glasses</span><span class="value" data-sum="translation"></span><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg></button>
+      </div>
+
+      <h2 class="group-title">Voice</h2>
+      <div class="list">
+        <button type="button" class="row nav" data-go="voice"><span class="tile green"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9zM16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"></path></svg></span>
+          <span class="row-label">Voices</span><span class="value" data-sum="voice"></span><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg></button>
+      </div>
+
+      <h2 class="group-title">App</h2>
+      <div class="list">
+        <button type="button" class="row nav" data-go="connection"><span class="tile grey"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg></span>
+          <span class="row-label">API keys</span><span class="value"><span class="dot" id="conn-dot"></span> <span id="conn-state"></span></span><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg></button>
+        <button type="button" class="row nav" data-go="gestures"><span class="tile grey"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18zM9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6M12 17h0"></path></svg></span>
+          <span class="row-label">Glasses gestures</span><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg></button>
+      </div>
+      <p class="note" style="text-align: center; margin-top: 18px" id="app-version">I-Translate</p>
+    </div>
+
+    <div class="page" data-page="translation">
+      <button type="button" class="back" data-back><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg>Settings</button>
+      <h1>On the glasses</h1>
+      <div class="list" style="margin-top: 14px">
+        <div class="row"><label class="row-label" for="show-original">Show what they said above the translation</label><input type="checkbox" class="switch" id="show-original" /></div>
+        <div class="row"><label class="row-label" for="reply-ideas">Reply ideas on the glasses</label><input type="checkbox" class="switch" id="reply-ideas" /></div>
+        <div class="row"><label class="row-label" for="tr-footer">Show footer (languages + tap hints) on Translation and Your turn</label><input type="checkbox" class="switch" id="tr-footer" /></div>
+      </div>
+      <p class="note">Reply ideas: a reply and a question under each translation. Swipe to the one you want, tap to say it in their language (the phone plays it). Double tap to say or type your own.</p>
+      <h2 class="group-title">Timing</h2>
+      <div class="list">
+        <div class="row"><label class="row-label" for="msg-for-translations">Keep each new line bright for</label><select id="msg-for-translations" class="msg-for inline" data-msg="translations" aria-label="Show each translated line for"></select></div>
+        <div class="row"><label class="row-label" for="screen-off-after">Display off after quiet</label><select id="screen-off-after" class="inline"></select></div>
+      </div>
+      <p class="note">The translation keeps running while the display is off; the next line lights it again. Nothing is saved: no notes, no recordings.</p>
+    </div>
+
+    <div class="page" data-page="voice">
+      <button type="button" class="back" data-back><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg>Settings</button>
+      <h1>Voices</h1>
+      <select class="voice-engine seg" id="voice-engine-read" aria-label="Voices" hidden></select>
+      <h2 class="group-title">Translation voices</h2>
+      <div class="list">
+        <div class="row stack"><label for="voice-spoken" id="lbl-voice-spoken">Voice for the spoken language</label><select id="voice-spoken" class="block"></select><span class="note" style="margin: 0" id="note-voice-spoken"></span></div>
+        <div class="row stack"><label for="voice-translated" id="lbl-voice-translated">Voice for the translated language</label><select id="voice-translated" class="block"></select><span class="note" style="margin: 0" id="note-voice-translated"></span></div>
+        <div class="row"><button type="button" class="btn link" id="btn-read-test">Test sound</button></div>
+      </div>
+      <p class="note" id="read-state"></p>
+      <p class="note">Picking a voice plays a sample. The glasses have no speaker: the phone speaks. Tap Test sound once to allow the phone to play audio.</p>
+    </div>
+
+    <div class="page" data-page="connection" id="connection">
+      <button type="button" class="back" data-back><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg>Settings</button>
+      <h1>API keys</h1>
+      <p class="note">I-Translate runs on two services you pay for directly: Soniox hears, an AI of your choice translates. Your keys stay on this phone and go only to those services.</p>
+      <div class="list" style="margin-top: 14px">
+        <div class="row stack"><label for="soniox-key">Soniox API key (hears both sides)</label><input id="soniox-key" class="block" type="password" placeholder="paste from console.soniox.com" autocapitalize="off" autocorrect="off" spellcheck="false" /></div>
+      </div>
+      <h2 class="group-title">AI that translates</h2>
+      <div class="list">
+        <div class="row"><span class="row-label">Provider</span><select id="ai-provider" class="inline" aria-label="AI provider"></select></div>
+        <div class="row stack"><label for="ai-key" id="ai-key-label">API key</label><input id="ai-key" class="block" type="password" autocapitalize="off" autocorrect="off" spellcheck="false" /></div>
+        <div class="row stack"><label for="ai-model">Model (optional)</label><input id="ai-model" class="block" type="text" autocapitalize="off" autocorrect="off" spellcheck="false" /></div>
+      </div>
+      <p class="note" id="ai-where"></p>
+      <button type="button" class="btn" id="btn-save">Save &amp; test</button>
+      <p class="note" id="key-note"></p>
+      <p class="note">Soniox: create a key at console.soniox.com (about $0.12 per hour of listening). The AI: a fast, small model costs a fraction of a cent per line; leave Model empty for the app's pick. Set a spending limit on both.</p>
+    </div>
+
+    <div class="page" data-page="gestures">
+      <button type="button" class="back" data-back><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg>Settings</button>
+      <h1>Glasses gestures</h1>
+      <div class="gesture-pair">
+        <div class="card"><small>Tap</small><strong>Do it</strong><span>Start, say, send</span></div>
+        <div class="card"><small>Double tap</small><strong>Your turn / back</strong><span>Speak your own, go back</span></div>
+      </div>
+      <ul class="list gestures" style="margin-top: 10px">
+        <li><strong>Start</strong><span>The app opens on the setup card: tap Start for your usual pair, or tap They speak / You read to change one, or Swap. A dark display: tap to bring the card back.</span></li>
+        <li><strong>Translating</strong><span>Their words in English on the glasses. Swipe to a reply idea, tap to say it. Double tap: your turn.</span></li>
+        <li><strong>Your turn</strong><span>Speak, tap to send: the phone says it in their language. Tap to speak again, double tap to go back.</span></li>
+        <li><strong>First time</strong><span>Settings › API keys: paste a Soniox key, pick an AI (Claude, OpenAI, Gemini, DeepSeek…) and paste its key, then Save &amp; test.</span></li>
+        <li><strong>Side menu</strong><span>Press and hold: Stop Translation, Change Languages (the setup card).</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <nav id="tabs" role="tablist" aria-label="Main">
+    <button type="button" role="tab" data-tab="translate">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h9M8.5 3v2M6 5c.8 3.4 3 6 6 7.5M11 5c-.9 3.7-3.4 6.6-7 8M13 21l4-9 4 9M14.5 18h5"></path></svg>Translate</button>
+    <button type="button" role="tab" data-tab="history">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"></path></svg>History</button>
+    <button type="button" role="tab" data-tab="settings">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M16 4a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM10 10a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM18 16a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"></path></svg>Settings</button>
+  </nav>
+
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>
